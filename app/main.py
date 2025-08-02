@@ -8,7 +8,10 @@ app = FastAPI(title="Email Sorter API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],  # Angular default port
+    allow_origins=[
+        "http://localhost:4200",  # Angular default port for development
+        "https://email-sorter-frontend.netlify.app"  # Production frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
