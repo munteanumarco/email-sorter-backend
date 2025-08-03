@@ -2,6 +2,12 @@
 
 A FastAPI-based backend service that helps users automatically organize their Gmail accounts using AI-powered email categorization.
 
+## 👋 Hey There!
+
+This is my backend implementation for the paid challenge! I've built it using FastAPI and deployed it on Render's free tier. Quick heads up - since it's on the free tier, the first request might take a few seconds as the service spins up from its sleep state. But once it's warmed up, everything runs smoothly!
+
+I had a great time building this, especially figuring out the OAuth flows, background syncing logic, and integrating the AI classification. While there's always room for improvement given also the short period of time (like moving from polling to pub/sub), I think this implementation provides a solid foundation for email organization and management.
+
 ## 🏗️ Architecture
 
 ### Core Components
@@ -34,78 +40,55 @@ A FastAPI-based backend service that helps users automatically organize their Gm
 - JWT-based session management
 - Separate OAuth2 flows for primary (auth) and secondary (connect) accounts
 
-## 🚀 Getting Started
+## 🚀 Deployment
 
-### Prerequisites
-- Python 3.8+
-- PostgreSQL
-- Google Cloud Project with Gmail API enabled
-- Google OAuth2 credentials
-- OpenAI API key
+Currently deployed on Render.com with:
+- Web service running both API and worker - since on free tier render wont let me create a separate background service - thats why I went with this solution.
+- PostgreSQL database
+- Environment variables for configuration
+- Automatic deployments from main branch
 
-### Environment Variables
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/dbname
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/auth/google/callback
-OPENAI_API_KEY=your_openai_api_key
-```
+## 🛠️ Development
 
-### Installation
+Available commands in Makefile:
 ```bash
-# Clone the repository
-git clone [repository-url]
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run database migrations
-alembic upgrade head
-
-# Start the application (development)
-uvicorn app.main:app --reload
+make build      # Build Docker containers
+make up         # Start services
+make down       # Stop services
+make test       # Run tests
+make logs       # View logs
 ```
 
-## 📐 API Design
+Docker Compose services:
+- `api`: FastAPI application + background worker
+- `db`: PostgreSQL database
 
-### Key Endpoints
+## 🧪 Tests
 
-- `/api/v1/auth/*`: Authentication and OAuth2 flows
-- `/api/v1/gmail-accounts/*`: Gmail account management
-- `/api/v1/emails/*`: Email operations and categorization
-- `/api/v1/categories/*`: Category management
+The project includes basic unit tests covering core functionality. To run the tests:
 
-## 🔄 Sync Process
+```bash
+# Using make
+make test
 
-1. Worker process runs alongside the main application
-2. Every minute, checks each connected Gmail account
-3. Fetches new emails using Gmail API
-4. Processes emails through OpenAI for classification
-5. Categorizes emails based on AI analysis
-6. Updates sync status and timestamps
+# Or directly with pytest
+python -m pytest -v
+```
 
-## 🛠️ Technical Implementation
+Current test coverage includes:
+- Model relationships (User, Category, Email, GmailAccount)
+- Basic CRUD operations
+- Service layer functionality
 
-### Authentication Flow
-1. User initiates Google OAuth2 login
-2. Backend receives OAuth2 callback with authorization code
-3. Exchanges code for access/refresh tokens
-4. Creates user account if new, or updates existing
-5. Issues JWT session token
+Tests use SQLite in-memory database and mock external services (OpenAI, Gmail API) for speed and reliability.
 
-### Account Connection Flow
-1. Authenticated user initiates new account connection
-2. Similar OAuth2 flow but stores as secondary account
-3. Immediate sync triggered for new account
-4. Account appears in user's account list
-
-### Email Classification Flow
-1. New emails are fetched from Gmail API
-2. Email content is preprocessed and sanitized
-3. OpenAI API analyzes email content and context
-4. AI model determines most appropriate category
-5. Email is tagged and stored with classification
+### Test Structure
+```
+tests/
+├── conftest.py           # Test configuration and fixtures
+├── test_models.py        # Database model tests
+└── test_services.py      # Service layer tests
+```
 
 ## ⚠️ Limitations & Future Improvements
 
@@ -120,38 +103,17 @@ uvicorn app.main:app --reload
    - Implement WebSocket/SSE for frontend updates
    - Pub/Sub system for scalable event handling
 
-2. **Performance Optimization**
+2. **Testing**
+   - Currently only basic unit tests
+   - Add integration tests
+   - Add CI/CD pipeline with test automation
+   - Add API endpoint tests
+   - Add worker process tests
+
+3. **Performance & Scalability**
    - Parallel email processing
    - Batch API requests
    - Caching frequently accessed data
-
-3. **Scalability**
    - Separate worker processes per account
-   - Queue-based email processing
-   - Horizontal scaling of workers
-
-## 📚 Dependencies
-
-- FastAPI: Web framework
-- SQLAlchemy: ORM
-- Alembic: Database migrations
-- Google API Client: Gmail API integration
-- OpenAI: Email classification
-- PyJWT: JWT token handling
-- Pydantic: Data validation
-- uvicorn: ASGI server
-
-## 🚀 Deployment
-
-Currently deployed on Render.com with:
-- Web service running both API and worker
-- PostgreSQL database
-- Environment variables for configuration
-- Automatic deployments from main branch
-
-## 👋 Hey There!
-
-This is my backend implementation for the paid challenge! I've built it using FastAPI and deployed it on Render's free tier. Quick heads up - since it's on the free tier, the first request might take a few seconds as the service spins up from its sleep state. But once it's warmed up, everything runs smoothly!
-
 
 Feel free to explore the code and let me know if you have any questions! 🚀
