@@ -23,8 +23,28 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
+  - type: worker
+    name: email-sorter-worker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: email-sorter-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
 databases:
   - name: email-sorter-db
     plan: free
     databaseName: email_sorter
-    user: email_sorter_user 
+    user: email_sorter_user
