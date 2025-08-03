@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import logging
+import re
+from bs4 import BeautifulSoup
+import base64
 
 from app.core.config import settings
 from app.models import GmailAccount, Email
@@ -26,40 +29,139 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Initialize AI service
 ai_service = AIService()
 
+async def extract_unsubscribe_link(headers: list, html_content: str = None) -> str | None:
+    """Extract unsubscribe link using List-Unsubscribe header and AI analysis"""
+    # Check List-Unsubscribe header first (most reliable)
+    unsubscribe_header = next(
+        (h['value'] for h in headers if h['name'].lower() == 'list-unsubscribe'),
+        None
+    )
+    
+    if unsubscribe_header:
+        # Extract URL from <http://example.com/unsubscribe>
+        url_match = re.search(r'<(https?://[^>]+)>', unsubscribe_header)
+        if url_match:
+            return url_match.group(1)
+        
+        # Some emails use mailto: in List-Unsubscribe
+        mailto_match = re.search(r'<mailto:([^>]+)>', unsubscribe_header)
+        if mailto_match:
+            return f"mailto:{mailto_match.group(1)}"
+
+    # If no header, use GPT to analyze the HTML content
+    if html_content:
+        try:
+            prompt = f"""
+            Analyze this email HTML content and find the unsubscribe link or mechanism.
+            Look for:
+            1. Links containing words like "unsubscribe", "opt-out", "remove", etc.
+            2. Footer sections with unsubscribe information
+            3. Preference center links
+            4. Email management URLs
+
+            Return ONLY the full URL if found, or "None" if no unsubscribe mechanism is found.
+            Do not include any explanation or additional text.
+
+            HTML Content:
+            {html_content[:1500]}  # First 1500 chars for token limit
+            """
+            
+            response = await ai_service.chat_completion_create(
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that analyzes emails to find unsubscribe mechanisms. Return only the URL or None."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0
+            )
+            
+            url = response.choices[0].message.content.strip()
+            if url.lower() != "none" and (url.startswith("http") or url.startswith("mailto:")):
+                return url
+
+        except Exception as e:
+            logger.error(f"Error using AI to extract unsubscribe link: {str(e)}")
+            # Fall back to basic extraction if AI fails
+            soup = BeautifulSoup(html_content, 'html.parser')
+            for link in soup.find_all('a', href=True):
+                if re.search(r'unsubscribe|opt.?out|remove', link.text, re.I) or \
+                   re.search(r'unsubscribe|opt.?out|remove', link['href'], re.I):
+                    return link['href']
+
+    return None
+
+def process_email_content(msg: dict) -> tuple[str, str | None, str | None]:
+    """Process email content and extract text, HTML, and unsubscribe link"""
+    html_content = None
+    text_content = None
+    
+    if 'parts' in msg['payload']:
+        parts = msg['payload']['parts']
+        for part in parts:
+            if part['mimeType'] == 'text/plain' and 'data' in part['body']:
+                text_content = base64.urlsafe_b64decode(part['body']['data']).decode()
+            elif part['mimeType'] == 'text/html' and 'data' in part['body']:
+                html_content = base64.urlsafe_b64decode(part['body']['data']).decode()
+    else:
+        body_data = msg['payload'].get('body', {}).get('data')
+        if body_data:
+            content = base64.urlsafe_b64decode(body_data).decode()
+            if msg['payload'].get('mimeType') == 'text/html':
+                html_content = content
+            else:
+                text_content = content
+
+    # Extract unsubscribe link using AI
+    unsubscribe_link = await extract_unsubscribe_link(msg['payload']['headers'], html_content)
+    
+    return text_content or '', html_content, unsubscribe_link
+
 async def sync_account(db: Session, account: GmailAccount):
     """Sync a single Gmail account"""
     try:
-        # Check if we've synced recently (reduced to 1 minute)
-        # if account.last_sync_time and datetime.utcnow() - account.last_sync_time < timedelta(minutes=1):
-        #     logger.info(f"Skipping sync for {account.email} - too soon since last sync")
-        #     return
-
         logger.info(f"Starting sync for {account.email}")
         gmail_service = GmailService(account, db)
         synced_count = 0
         
         # Fetch emails since last sync time or last 24 hours if no sync
         since_time = account.last_sync_time or (datetime.utcnow() - timedelta(days=1))
-        new_emails_data = gmail_service.list_unarchived_emails(since=since_time)
+        new_messages = gmail_service.list_unarchived_messages(since=since_time)
         
-        for email_data in new_emails_data:
+        for message in new_messages:
             # Check if email already exists
             existing_email = db.query(Email).filter(
-                Email.gmail_id == email_data["gmail_id"],
+                Email.gmail_id == message["id"],
                 Email.gmail_account_id == account.id
             ).first()
 
             if not existing_email:
+                # Get full message content
+                msg = gmail_service.get_message(message["id"])
+                
+                # Extract headers
+                headers = msg['payload']['headers']
+                subject = next(
+                    (h['value'] for h in headers if h['name'].lower() == 'subject'),
+                    'No Subject'
+                )
+                sender = next(
+                    (h['value'] for h in headers if h['name'].lower() == 'from'),
+                    'Unknown'
+                )
+                
+                # Process content and extract unsubscribe link
+                content, html_content, unsubscribe_link = await process_email_content(msg)
+                
                 # Create new email record
                 db_email = Email(
-                    gmail_id=email_data["gmail_id"],
-                    subject=email_data["subject"],
-                    sender=email_data["sender"],
-                    content=email_data["content"],
-                    received_at=email_data["received_at"],
+                    gmail_id=message["id"],
+                    subject=subject,
+                    sender=sender,
+                    content=content,
+                    received_at=datetime.fromtimestamp(int(msg['internalDate'])/1000),
                     user_id=account.user_id,
                     gmail_account_id=account.id,
-                    is_archived=True
+                    is_archived=True,
+                    unsubscribe_link=unsubscribe_link
                 )
                 db.add(db_email)
                 db.commit()  # Commit to get the email ID
@@ -69,7 +171,7 @@ async def sync_account(db: Session, account: GmailAccount):
                 await ai_service.process_new_email(db, db_email)
                 
                 # Archive email in Gmail
-                gmail_service.archive_email(email_data["gmail_id"])
+                gmail_service.archive_email(message["id"])
                 synced_count += 1
         
         # Update last sync time
