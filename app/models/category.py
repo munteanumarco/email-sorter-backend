@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -16,3 +16,8 @@ class Category(Base):
     # Relationships
     user = relationship("User", back_populates="categories")
     emails = relationship("Email", back_populates="category")
+
+    # Make category names unique per user
+    __table_args__ = (
+        UniqueConstraint('name', 'user_id', name='uix_category_name_user'),
+    )
