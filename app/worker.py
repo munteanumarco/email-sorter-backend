@@ -6,7 +6,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import logging
 import re
-from bs4 import BeautifulSoup
 import base64
 
 from app.core.config import settings
@@ -48,27 +47,27 @@ async def extract_unsubscribe_link(headers: list, html_content: str = None) -> s
         if mailto_match:
             return f"mailto:{mailto_match.group(1)}"
 
-    # If no header, use GPT to analyze the HTML content
+    # If no header, use GPT to analyze the content
     if html_content:
         try:
             prompt = f"""
-            Analyze this email HTML content and find the unsubscribe link or mechanism.
-            Look for:
-            1. Links containing words like "unsubscribe", "opt-out", "remove", etc.
-            2. Footer sections with unsubscribe information
-            3. Preference center links
-            4. Email management URLs
+            Analyze this email content and find the unsubscribe URL or email address.
+            The content might be in HTML format. Look for:
+            1. Unsubscribe links (containing words like unsubscribe, opt-out, remove)
+            2. Email management or preference center URLs
+            3. Unsubscribe email addresses
 
-            Return ONLY the full URL if found, or "None" if no unsubscribe mechanism is found.
+            Return ONLY the full URL or mailto link if found, exactly as it appears.
+            Return "None" if no unsubscribe mechanism is found.
             Do not include any explanation or additional text.
 
-            HTML Content:
-            {html_content[:1500]}  # First 1500 chars for token limit
+            Email Content:
+            {html_content[:2000]}  # First 2000 chars should be enough
             """
             
             response = await ai_service.chat_completion_create(
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that analyzes emails to find unsubscribe mechanisms. Return only the URL or None."},
+                    {"role": "system", "content": "You are a helpful assistant that finds unsubscribe links in emails. Return only the URL or None."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0
@@ -80,12 +79,6 @@ async def extract_unsubscribe_link(headers: list, html_content: str = None) -> s
 
         except Exception as e:
             logger.error(f"Error using AI to extract unsubscribe link: {str(e)}")
-            # Fall back to basic extraction if AI fails
-            soup = BeautifulSoup(html_content, 'html.parser')
-            for link in soup.find_all('a', href=True):
-                if re.search(r'unsubscribe|opt.?out|remove', link.text, re.I) or \
-                   re.search(r'unsubscribe|opt.?out|remove', link['href'], re.I):
-                    return link['href']
 
     return None
 
@@ -111,7 +104,7 @@ async def process_email_content(msg: dict) -> tuple[str, str | None, str | None]
                 text_content = content
 
     # Extract unsubscribe link using AI
-    unsubscribe_link = await extract_unsubscribe_link(msg['payload']['headers'], html_content)
+    unsubscribe_link = await extract_unsubscribe_link(msg['payload']['headers'], html_content or text_content)
     
     return text_content or '', html_content, unsubscribe_link
 
