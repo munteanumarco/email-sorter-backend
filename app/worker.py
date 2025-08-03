@@ -117,7 +117,7 @@ async def sync_account(db: Session, account: GmailAccount):
         
         # Fetch emails since last sync time or last 24 hours if no sync
         since_time = account.last_sync_time or (datetime.utcnow() - timedelta(days=1))
-        new_messages = gmail_service.list_unarchived_messages(since=since_time)
+        new_messages = gmail_service.list_unarchived_emails(since=since_time)
         
         for message in new_messages:
             # Check if email already exists
