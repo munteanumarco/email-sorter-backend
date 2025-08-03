@@ -61,45 +61,8 @@ class GmailService:
             messages = []
             if 'messages' in results:
                 for message in results['messages']:
-                    # Get full message details
-                    msg = self.service.users().messages().get(
-                        userId='me',
-                        id=message['id'],
-                        format='full'
-                    ).execute()
-                    
-                    # Extract headers
-                    headers = msg['payload']['headers']
-                    subject = next(
-                        (h['value'] for h in headers if h['name'].lower() == 'subject'),
-                        'No Subject'
-                    )
-                    sender = next(
-                        (h['value'] for h in headers if h['name'].lower() == 'from'),
-                        'Unknown'
-                    )
-                    
-                    # Get message body
-                    if 'parts' in msg['payload']:
-                        parts = msg['payload']['parts']
-                        body = next(
-                            (part['body']['data'] for part in parts if part['mimeType'] == 'text/plain'),
-                            None
-                        )
-                    else:
-                        body = msg['payload'].get('body', {}).get('data')
-
-                    if body:
-                        body = base64.urlsafe_b64decode(body).decode()
-                    else:
-                        body = ''
-
                     messages.append({
-                        'gmail_id': msg['id'],
-                        'subject': subject,
-                        'sender': sender,
-                        'content': body,
-                        'received_at': datetime.fromtimestamp(int(msg['internalDate'])/1000)
+                        'id': message['id']
                     })
 
             return messages
@@ -110,6 +73,22 @@ class GmailService:
                 self.credentials = self._get_credentials()
                 self.service = build('gmail', 'v1', credentials=self.credentials)
                 return self.list_unarchived_emails(since)
+            raise
+
+    def get_message(self, message_id: str) -> dict:
+        """Get a specific message by ID"""
+        try:
+            return self.service.users().messages().get(
+                userId='me',
+                id=message_id,
+                format='full'
+            ).execute()
+        except Exception as e:
+            # If we get a token error, try refreshing and retry once
+            if "invalid_grant" in str(e):
+                self.credentials = self._get_credentials()
+                self.service = build('gmail', 'v1', credentials=self.credentials)
+                return self.get_message(message_id)
             raise
 
     def archive_email(self, message_id: str) -> None:
