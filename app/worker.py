@@ -89,7 +89,7 @@ async def extract_unsubscribe_link(headers: list, html_content: str = None) -> s
 
     return None
 
-def process_email_content(msg: dict) -> tuple[str, str | None, str | None]:
+async def process_email_content(msg: dict) -> tuple[str, str | None, str | None]:
     """Process email content and extract text, HTML, and unsubscribe link"""
     html_content = None
     text_content = None
