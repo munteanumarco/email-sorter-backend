@@ -23,10 +23,6 @@ def get_latest_logs(db: Session = Depends(get_db)):
     logs = get_latest_agent_logs()
     parsed_logs = []
     for log in logs:
-        # Skip non-browser-use logs
-        if not any(x in log for x in ["[browser_use.", "[app.services.unsubscribe]"]):
-            continue
-
         # Extract timestamp if available
         timestamp = datetime.now().isoformat()
 
@@ -36,13 +32,17 @@ def get_latest_logs(db: Session = Depends(get_db)):
             log_type = "error"
         elif "WARNING" in log:
             log_type = "warning"
-        elif "cost" in log or "Thinking" in log:
+        elif any(x in log for x in ["cost", "Thinking", "Memory", "Eval"]):
             log_type = "debug"
+        elif "SUCCESS" in log or "Successfully" in log:
+            log_type = "success"
 
         # Extract message
         message = log
         if "] " in log:
-            message = log.split("] ", 1)[1]
+            parts = log.split("] ", 1)
+            if len(parts) > 1:
+                message = parts[1]
 
         # Extract agent ID if available
         agent_id = None
