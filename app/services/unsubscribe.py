@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 import asyncio
 import json
 from openai import AsyncOpenAI
@@ -6,12 +6,30 @@ from browser_use import Agent
 from browser_use.llm import ChatOpenAI
 import logging
 from datetime import datetime
+from collections import deque
 
 from app.core.config import settings
 from app.models import Email
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+# Create a circular buffer to store the latest logs
+latest_logs = deque(maxlen=1000)  # Store last 1000 log entries
+
+class LogHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            latest_logs.append(msg)
+        except Exception:
+            self.handleError(record)
+
+# Add our custom handler to the root logger
+logging.getLogger().addHandler(LogHandler())
+
+def get_latest_agent_logs() -> List[str]:
+    return list(latest_logs)
 
 class UnsubscribeService:
     def __init__(self):
