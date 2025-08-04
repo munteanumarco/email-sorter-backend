@@ -4,7 +4,7 @@ A FastAPI-based backend service that helps users automatically organize their Gm
 
 ## 👋 Hey There!
 
-This is my backend implementation for the paid challenge! I've built it using FastAPI and deployed it on Render's free tier. Quick heads up - since it's on the free tier, the first request might take a few seconds as the service spins up from its sleep state. But once it's warmed up, everything runs smoothly!
+This is my backend implementation for the paid challenge! I've built it using FastAPI and deployed it on Render's free tier. Quick heads up - since it's on the free tier, the first request might take a few seconds as the service spins up from its sleep state. But once it's warmed up, everything runs smoothly! Also there are some issues with different browsers, configuring https, Safari I saw it does not work, I used Google Chrome so everything works smoothly on this browser.
 
 I had a great time building this, especially figuring out the OAuth flows, background syncing logic, and integrating the AI classification. While there's always room for improvement given also the short period of time (like moving from polling to pub/sub), I think this implementation provides a solid foundation for email organization and management.
 
