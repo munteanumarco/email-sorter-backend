@@ -21,6 +21,26 @@ I had a great time building this, especially figuring out the OAuth flows, backg
   - Leverages GPT-4 for intelligent navigation and form filling
   - Validates unsubscribe success with confidence scoring
 
+## 🔍 Agent Logs Implementation
+
+**Note: This is a quick, hackish implementation for demo purposes only!**
+
+I wanted to provide visibility into what the browser automation agent is doing in real-time, so I implemented a basic logging system. Here's how it works:
+
+1. **Log Collection**:
+   - Uses a circular buffer (deque) to store the last 1000 log entries in memory
+   - Captures logs from browser-use agent and unsubscribe service
+   - Stores raw log messages without any filtering or sanitization
+
+
+2. **Security Considerations**:
+   - ⚠️ This is NOT production-ready!
+   - Logs are stored in memory without encryption
+   - No user/session isolation for logs
+   - Could potentially expose sensitive information
+   - No log rotation or persistence
+   - Memory usage could grow in high-traffic scenarios
+
 ## 🚀 Deployment
 
 Currently deployed on Render.com with:
@@ -80,49 +100,4 @@ While I've focused on implementing the core requirements and handling common edg
    - Separate worker processes per account
    - Queue system for unsubscribe requests
 
-## 🔍 Agent Logs Implementation
 
-**Note: This is a quick, hackish implementation for demo purposes only!**
-
-I wanted to provide visibility into what the browser automation agent is doing in real-time, so I implemented a basic logging system. Here's how it works:
-
-1. **Log Collection**:
-   - Uses a circular buffer (deque) to store the last 1000 log entries in memory
-   - Captures logs from browser-use agent and unsubscribe service
-   - Stores raw log messages without any filtering or sanitization
-
-2. **Implementation Details**:
-   ```python
-   # In-memory circular buffer for logs
-   latest_logs = deque(maxlen=1000)
-
-   # Custom log handler to capture logs
-   class LogHandler(logging.Handler):
-       def emit(self, record):
-           latest_logs.append(self.format(record))
-   ```
-
-3. **Security Considerations**:
-   - ⚠️ This is NOT production-ready!
-   - Logs are stored in memory without encryption
-   - No user/session isolation for logs
-   - Could potentially expose sensitive information
-   - No log rotation or persistence
-   - Memory usage could grow in high-traffic scenarios
-
-4. **Why This Approach?**:
-   - Quick to implement for demo purposes
-   - Shows real-time agent activity
-   - Helps understand what's happening during unsubscribe attempts
-   - Useful for debugging and demonstration
-
-5. **Production Recommendations**:
-   - Implement proper log aggregation (e.g., ELK Stack)
-   - Add user/session context to logs
-   - Store logs securely in a database
-   - Implement log rotation and archival
-   - Add proper access controls
-   - Filter sensitive information
-   - Use structured logging format
-
-This implementation was a quick solution to demonstrate the agent's capabilities. In a production environment, you'd want a more robust, secure, and scalable logging system.
