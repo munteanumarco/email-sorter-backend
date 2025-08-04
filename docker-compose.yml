@@ -9,20 +9,12 @@ services:
       - .:/app
     env_file:
       - .env.docker
+    environment:
+      - BROWSER_USE_CHROME_PATH=/usr/bin/chromium
     depends_on:
       - db
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  worker:
-    build: .
-    volumes:
-      - .:/app
-    env_file:
-      - .env.docker
-    depends_on:
-      - db
-      - api
-    command: python -m app.worker
 
   db:
     image: postgres:15

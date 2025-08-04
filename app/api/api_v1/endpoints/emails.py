@@ -2,14 +2,75 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from pydantic import BaseModel
 
 from app.api import deps
 from app.models import User, Email, Category, GmailAccount
 from app.schemas.email import Email as EmailSchema, EmailCreate, EmailUpdate
 from app.services.gmail import GmailService
+from app.services.unsubscribe import UnsubscribeService
 
 router = APIRouter()
 
+# Add the new BulkUnsubscribeRequest model
+class BulkUnsubscribeRequest(BaseModel):
+    email_ids: List[int]
+
+# Add the new bulk-unsubscribe endpoint
+@router.post("/bulk-unsubscribe")
+async def bulk_unsubscribe(
+    request: BulkUnsubscribeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Unsubscribe from multiple emails in the background"""
+    # Get emails that belong to the user
+    emails = db.query(Email).filter(
+        Email.id.in_(request.email_ids),
+        Email.user_id == current_user.id
+    ).all()
+
+    results = []
+    unsubscribe_service = UnsubscribeService()
+
+    for email in emails:
+        if email.unsubscribe_link and not email.unsubscribe_link.startswith('mailto:'):
+            # Update email status to pending
+            email.unsubscribe_status = 'pending'
+            db.add(email)
+            
+            # Add to background tasks
+            background_tasks.add_task(
+                unsubscribe_service.unsubscribe_from_url,
+                db,
+                email.id,
+                email.unsubscribe_link
+            )
+            results.append({
+                "email_id": email.id,
+                "status": "processing",
+                "unsubscribe_link": email.unsubscribe_link
+            })
+        else:
+            # Update email status to invalid_link
+            email.unsubscribe_status = 'invalid_link'
+            db.add(email)
+            results.append({
+                "email_id": email.id,
+                "status": "no_valid_unsubscribe_link",
+                "unsubscribe_link": email.unsubscribe_link if email.unsubscribe_link else None
+            })
+    
+    # Commit all status updates
+    db.commit()
+
+    return {
+        "message": f"Processing {len([r for r in results if r['status'] == 'processing'])} unsubscribe requests",
+        "results": results
+    }
+
+# Keep all existing endpoints below
 async def sync_account(db: Session, account: GmailAccount):
     """Background task to sync a single Gmail account"""
     try:

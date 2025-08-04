@@ -133,16 +133,27 @@ async def sync_account(db: Session, account: GmailAccount):
                         is_archived=True,
                         unsubscribe_link=unsubscribe_link
                     )
-                    db.add(db_email)
-                    db.commit()  # Commit to get the email ID
                     
-                    # Process with AI
-                    logger.info(f"Processing email '{db_email.subject}' with AI")
+                    # Process with AI before committing
+                    logger.info(f"Processing email '{subject}' with AI")
                     await ai_service.process_new_email(db, db_email)
+                    
+                    # Now commit the email with all its data
+                    db.add(db_email)
+                    db.commit()
+                    db.refresh(db_email)
                     
                     # Archive email in Gmail
                     gmail_service.archive_email(message["id"])
                     synced_count += 1
+                    
+                    # Log the category assignment
+                    if db_email.category_id:
+                        category = db.query(Category).filter(Category.id == db_email.category_id).first()
+                        logger.info(f"Email '{subject}' assigned to category: {category.name if category else 'Unknown'}")
+                    else:
+                        logger.warning(f"Email '{subject}' was not assigned to any category")
+                    
             except Exception as e:
                 logger.error(f"Error processing message {message['id']} for {account.email}: {str(e)}")
                 db.rollback()

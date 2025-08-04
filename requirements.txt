@@ -18,3 +18,4 @@ httpx>=0.25.1
 python-dotenv>=1.0.0
 email-validator>=2.1.0.post1
 PyJWT>=2.0.0
+browser-use[cli]>=0.5.9

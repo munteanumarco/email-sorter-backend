@@ -3,7 +3,13 @@ services:
     name: email-sorter-backend
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt && alembic upgrade head && chmod +x start.sh
+    buildCommand: |
+      apt-get update && apt-get install -y gcc postgresql-client
+      pip install -r requirements.txt
+      pip install playwright
+      playwright install chromium
+      playwright install-deps chromium
+      alembic upgrade head && chmod +x start.sh
     startCommand: ./start.sh
     envVars:
       - key: DATABASE_URL
@@ -22,6 +28,7 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+
 
 databases:
   - name: email-sorter-db

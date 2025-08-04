@@ -14,6 +14,8 @@ class Email(Base):
     content = Column(Text)
     summary = Column(Text, nullable=True)
     unsubscribe_link = Column(Text, nullable=True)  # Added this field
+    unsubscribe_status = Column(String, nullable=True)  # pending, success, failed
+    unsubscribed_at = Column(DateTime, nullable=True)
     received_at = Column(DateTime)
     is_archived = Column(Boolean, default=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)

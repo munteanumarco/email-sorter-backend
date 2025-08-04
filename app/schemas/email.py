@@ -28,6 +28,8 @@ class Email(EmailBase):
     created_at: datetime
     updated_at: datetime
     gmail_account: Optional[GmailAccount] = None
+    unsubscribe_status: Optional[str] = None
+    unsubscribed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
