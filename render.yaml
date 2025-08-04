@@ -13,7 +13,9 @@ services:
       # Install and setup Playwright with specific browser path
       export PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright-browsers
       pip install playwright
-      playwright install --with-deps chromium
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pip install playwright
+      mkdir -p /opt/render/project/.playwright-browsers
+      playwright install chromium --with-deps
       
       # Run migrations and prepare start script
       alembic upgrade head && chmod +x start.sh
@@ -37,6 +39,10 @@ services:
         sync: false
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/project/.playwright-browsers
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "0"
+      - key: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+        value: /opt/render/project/.playwright-browsers/chromium-1181/chrome-linux/chrome
 
 
 databases:
