@@ -8,11 +8,12 @@ from pydantic import BaseModel
 router = APIRouter()
 
 class AgentLog(BaseModel):
-    type: str
+    type: str  # info, error, warning, debug, success, setup
     message: str
     timestamp: str
     agent_id: str | None = None
     task_id: str | None = None
+    raw_log: str | None = None  # Store the original log message
 
 @router.get("/latest/", response_model=List[AgentLog])
 def get_latest_logs(db: Session = Depends(get_db)):
@@ -30,12 +31,14 @@ def get_latest_logs(db: Session = Depends(get_db)):
         log_type = "info"
         if "ERROR" in log:
             log_type = "error"
-        elif "WARNING" in log:
+        elif "WARNING" in log or "⚠️" in log:
             log_type = "warning"
-        elif any(x in log for x in ["cost", "Thinking", "Memory", "Eval"]):
+        elif any(x in log for x in ["cost", "Thinking", "Memory", "Eval", "🧠", "📊", "💡"]):
             log_type = "debug"
-        elif "SUCCESS" in log or "Successfully" in log:
+        elif "SUCCESS" in log or "Successfully" in log or "✅" in log:
             log_type = "success"
+        elif "🎭" in log or "📦" in log or "📂" in log or "🔗" in log:
+            log_type = "setup"
 
         # Extract message
         message = log
@@ -58,7 +61,8 @@ def get_latest_logs(db: Session = Depends(get_db)):
                 message=message,
                 timestamp=timestamp,
                 agent_id=agent_id,
-                task_id=None
+                task_id=None,
+                raw_log=log
             )
         )
 
