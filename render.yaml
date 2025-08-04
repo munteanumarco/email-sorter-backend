@@ -23,7 +23,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: PLAYWRIGHT_BROWSERS_PATH
-        value: /opt/render/project/.playwright-browsers
+        value: /opt/render/project/.cache/playwright
 
 
 databases:

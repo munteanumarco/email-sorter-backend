@@ -15,7 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set Playwright browser path and install dependencies
-ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.cache/playwright
 RUN apt-get update && apt-get install -y \
     libnss3 \
     libnspr4 \
@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Playwright and browser
 RUN pip install playwright && \
-    mkdir -p /app/.playwright-browsers && \
+    mkdir -p /opt/render/project/.cache/playwright && \
     playwright install --with-deps chromium
 
 # Copy the rest of the application
