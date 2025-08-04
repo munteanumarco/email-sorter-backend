@@ -4,11 +4,10 @@ services:
     env: python
     plan: free
     buildCommand: |
-      apt-get update && apt-get install -y gcc postgresql-client
+      apt-get update && apt-get install -y gcc postgresql-client libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
       pip install -r requirements.txt
       pip install playwright
-      playwright install chromium
-      playwright install-deps chromium
+      PLAYWRIGHT_BROWSERS_PATH=/opt/render/.cache/ms-playwright playwright install chromium --with-deps
       alembic upgrade head && chmod +x start.sh
     startCommand: ./start.sh
     envVars:
