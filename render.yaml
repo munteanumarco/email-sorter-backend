@@ -1,25 +1,10 @@
 services:
   - type: web
     name: email-sorter-backend
-    env: python
+    env: docker
     plan: free
-    buildCommand: |
-      # Install system dependencies including Chromium
-      apt-get update && apt-get install -y gcc postgresql-client chromium chromium-driver libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrender1 libxtst6 libnss3 libasound2 libatk-bridge2.0-0 libgtk-3-0 libgbm1
-      
-      # Install Python dependencies
-      pip install -r requirements.txt
-      
-      # Install Playwright without browser download
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pip install playwright
-      
-      # Create browser directory and symlink system Chromium
-      mkdir -p /opt/render/project/.playwright-browsers/chromium-1181/chrome-linux/
-      ln -s /usr/bin/chromium /opt/render/project/.playwright-browsers/chromium-1181/chrome-linux/chrome
-      
-      # Run migrations and prepare start script
-      alembic upgrade head && chmod +x start.sh
-    startCommand: ./start.sh
+    dockerfilePath: ./Dockerfile
+    dockerCommand: ./start.sh
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -39,10 +24,6 @@ services:
         sync: false
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/project/.playwright-browsers
-      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
-        value: "1"
-      - key: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
-        value: /usr/bin/chromium
 
 
 databases:
