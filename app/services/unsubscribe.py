@@ -64,9 +64,10 @@ class UnsubscribeService:
                    - Email input fields (use {email.sender} if needed)
                    - Checkboxes to confirm unsubscribe
                    - Dropdown menus for unsubscribe reasons
-                3. Complete any required forms or confirmations
-                4. Verify the unsubscribe was successful by looking for confirmation messages
-                5. Return 'true' if successful, 'false' if not successful""",
+                3. IMPORTANT: If you encounter any CAPTCHA or human verification, STOP immediately and return 'false'. Do not attempt to solve CAPTCHAs.
+                4. Complete any required forms or confirmations (but not CAPTCHAs)
+                5. Verify the unsubscribe was successful by looking for confirmation messages
+                6. Return 'true' if successful, 'false' if not successful""",
                 llm=ChatOpenAI(
                     api_key=settings.OPENAI_API_KEY,
                     model="gpt-4o",
