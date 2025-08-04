@@ -1,6 +1,6 @@
 # Email Sorter Backend
 
-A FastAPI-based backend service that helps users automatically organize their Gmail accounts using AI-powered email categorization.
+A FastAPI-based backend service that helps users automatically organize their Gmail accounts using AI-powered email categorization and automated unsubscribe functionality.
 
 ## 👋 Hey There!
 
@@ -12,90 +12,53 @@ I had a great time building this, especially figuring out the OAuth flows, backg
 
 ### Core Components
 
-- **FastAPI Application**: RESTful API service handling authentication, Gmail account management, and email categorization
+- **FastAPI Application**: RESTful API service handling authentication, Gmail account management, email categorization, and unsubscribe automation
 - **Background Worker**: Periodic email sync process running alongside the main application
-- **PostgreSQL Database**: Stores user data, Gmail accounts, emails, and categories
+- **PostgreSQL Database**: Stores user data, Gmail accounts, emails, categories, and unsubscribe statuses
 - **OpenAI Integration**: AI-powered email classification using GPT models
-
-### Key Features
-
-#### Multi-Account Management
-- Users can connect one primary Gmail account for authentication
-- Additional Gmail accounts can be connected for email management
-- Each account maintains its own OAuth2 credentials and sync status
-
-#### Email Synchronization
-- Background worker polls Gmail accounts every minute for new emails
-- Emails are downloaded, processed, and categorized automatically
-- Sync status and timestamps are maintained per account
-
-#### AI-Powered Classification
-- Uses OpenAI's GPT models to analyze email content
-- Automatically categorizes emails based on their content and context
-- Intelligent summarization of email content for better organization
-- Adapts to user-defined categories for personalized sorting
-
-#### Authentication & Security
-- Google OAuth2 for both authentication and Gmail API access
-- JWT-based session management
-- Separate OAuth2 flows for primary (auth) and secondary (connect) accounts
+- **Browser-Use Integration**: Open-source browser automation agent that connects AI models (OpenAI) to browsers for automated unsubscribe flows
+  - Uses Playwright for browser control
+  - Leverages GPT-4 for intelligent navigation and form filling
+  - Validates unsubscribe success with confidence scoring
 
 ## 🚀 Deployment
 
 Currently deployed on Render.com with:
-- Web service running both API and worker - since on free tier render wont let me create a separate background service - thats why I went with this solution.
+- Docker-based deployment for consistent environments
+- Web service running both API and worker (combined due to free tier limitations - a production setup would separate these)
 - PostgreSQL database
 - Environment variables for configuration
 - Automatic deployments from main branch
 
-## 🛠️ Development
-
-Available commands in Makefile:
-```bash
-make build      # Build Docker containers
-make up         # Start services
-make down       # Stop services
-make test       # Run tests
-make logs       # View logs
-```
-
-Docker Compose services:
-- `api`: FastAPI application + background worker
-- `db`: PostgreSQL database
-
 ## 🧪 Tests
 
-The project includes basic unit tests covering core functionality. To run the tests:
+The project includes basic unit tests, though with the time constraints, this is an area with room for improvement:
 
-```bash
-# Using make
-make test
+- **Current Coverage**:
+  - Core model relationships
+  - Basic CRUD operations
+  - Service layer functionality
+  - Email categorization logic
 
-# Or directly with pytest
-python -m pytest -v
-```
-
-Current test coverage includes:
-- Model relationships (User, Category, Email, GmailAccount)
-- Basic CRUD operations
-- Service layer functionality
-
-Tests use SQLite in-memory database and mock external services (OpenAI, Gmail API) for speed and reliability.
-
-### Test Structure
-```
-tests/
-├── conftest.py           # Test configuration and fixtures
-├── test_models.py        # Database model tests
-└── test_services.py      # Service layer tests
-```
+- **Future Test Improvements**:
+  - Integration tests for API endpoints
+  - End-to-end testing for complete flows
+  - CI/CD pipeline for automated testing
+  - Browser automation test suite
+  - Performance and load testing
 
 ## ⚠️ Limitations & Future Improvements
+
+While I've focused on implementing the core requirements and handling common edge cases, there are some limitations and areas for improvement:
 
 ### Current Limitations
 - Polling-based sync (1-minute intervals)
 - Sequential email processing
 - Rate limits based on Gmail API quotas
+- Browser automation might fail on complex unsubscribe flows
+- No retry mechanism for failed unsubscribe attempts
+- Limited handling of JavaScript-heavy unsubscribe pages
+- No handling of email confirmation for unsubscribe
 
 ### Potential Improvements
 1. **Real-time Updates**
@@ -103,17 +66,18 @@ tests/
    - Implement WebSocket/SSE for frontend updates
    - Pub/Sub system for scalable event handling
 
-2. **Testing**
-   - Currently only basic unit tests
-   - Add integration tests
-   - Add CI/CD pipeline with test automation
-   - Add API endpoint tests
-   - Add worker process tests
+2. **Unsubscribe Flow**
+   - Add retry mechanism with exponential backoff
+   - Implement unsubscribe confirmation tracking
+   - Support for multi-step unsubscribe flows
+   - Handle JavaScript-rendered content better
+   - Store screenshots of failed attempts for debugging
 
 3. **Performance & Scalability**
    - Parallel email processing
    - Batch API requests
    - Caching frequently accessed data
    - Separate worker processes per account
+   - Queue system for unsubscribe requests
 
 Feel free to explore the code and let me know if you have any questions! 🚀
