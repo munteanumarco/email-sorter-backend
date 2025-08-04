@@ -4,10 +4,18 @@ services:
     env: python
     plan: free
     buildCommand: |
-      apt-get update && apt-get install -y gcc postgresql-client libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+      # Install system dependencies
+      apt-get update && apt-get install -y gcc postgresql-client libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libx11-xcb1 libxcb-dri3-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrender1 libxtst6 libnss3 libasound2 libatk-bridge2.0-0 libgtk-3-0 libgbm1
+      
+      # Install Python dependencies
       pip install -r requirements.txt
+      
+      # Install and setup Playwright with specific browser path
+      export PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright-browsers
       pip install playwright
-      PLAYWRIGHT_BROWSERS_PATH=/opt/render/.cache/ms-playwright playwright install chromium --with-deps
+      playwright install --with-deps chromium
+      
+      # Run migrations and prepare start script
       alembic upgrade head && chmod +x start.sh
     startCommand: ./start.sh
     envVars:
@@ -27,6 +35,8 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/.playwright-browsers
 
 
 databases:
